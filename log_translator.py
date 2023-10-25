@@ -1,3 +1,5 @@
+import csv
+
 import pandas as pd
 import re
 
@@ -16,6 +18,10 @@ log_file = 'Data/Log/MacContent.log'
 translated_log_file = 'Data/TranslatedLog/Mac_translated_content.log'
 translated_corresspond_log_file = 'Data/TranslatedLog/Mac_correspond_content.log'
 
+groundtruth_event_file = 'Data/GroundTruth/Mac_event_groundtruth.csv'
+groundtruth_writer = csv.writer(open(groundtruth_event_file, 'w'))
+groundtruth_writer.writerow(['LineId','Content','EventId','EventTemplate','ParameterList'])
+
 translated_df = pd.read_csv(translated_template_file)
 templates = list(translated_df['Templates'])
 translated_templates = list(translated_df['Translated'])
@@ -33,6 +39,9 @@ translated_correspond_file = open(translated_corresspond_log_file, "w")
 
 for log in loglines:
     trans_log = None
+    correspond_event = None
+    correspond_para = []
+    correspond_log_id = 0
     for tmp in templates:
         tmp_regex = templates2regex(tmp)
         if(re.match(tmp_regex, log)):
@@ -44,11 +53,19 @@ for log in loglines:
                     index = 0
                     while (index < n_para):
                         trans_tmp = replace_first(trans_tmp, '<*>', str(para_list[index]))
+                        correspond_para.append(para_list[index])
                         index = index + 1
                 else:
                     trans_tmp = trans_tmp.replace('<*>', para_list[0])
+                    correspond_para.append(para_list[0])
             trans_log = trans_tmp
+            correspond_event = tmp
             break
     if(trans_log != None):
         translated_file.write(trans_log + '\n')
         translated_correspond_file.write(log)
+
+        correspond_event_id = hash(correspond_event)
+        groundtruth_row = [correspond_log_id,trans_log,correspond_event_id,correspond_event,correspond_para]
+        groundtruth_writer.writerow(groundtruth_row)
+        correspond_log_id = correspond_log_id+1
